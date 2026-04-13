@@ -12,6 +12,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -226,19 +227,19 @@ fun CameraScreen(
                     onDeleteLabel = viewModel::deleteLabel
                 )
 
-                // Controls row
-                Row(
+                // Controls row — shutter horizontally centered
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
+                    contentAlignment = Alignment.Center
                 ) {
-                    // Camera flip
+                    // Camera flip (left)
                     IconButton(
                         onClick = { viewModel.toggleCamera() },
                         modifier = Modifier
-                            .size(48.dp)
+                            .align(Alignment.CenterStart)
+                            .size(44.dp)
                             .background(VacorderNavy, CircleShape)
                     ) {
                         Icon(
@@ -248,7 +249,7 @@ fun CameraScreen(
                         )
                     }
 
-                    // Shutter button
+                    // Shutter button (center)
                     Button(
                         onClick = {
                             imageCapture.value?.takePicture(
@@ -264,8 +265,11 @@ fun CameraScreen(
                                 }
                             )
                         },
-                        modifier = Modifier.size(72.dp),
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .size(72.dp),
                         shape = CircleShape,
+                        contentPadding = PaddingValues(0.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = VacorderYellow,
                             contentColor = VacorderNavy
@@ -279,15 +283,17 @@ fun CameraScreen(
                         )
                     }
 
-                    // Resolution selector
+                    // Resolution selector (right) — compact
                     var showResMenu by remember { mutableStateOf(false) }
-                    Box {
+                    Box(modifier = Modifier.align(Alignment.CenterEnd)) {
                         OutlinedButton(
                             onClick = { showResMenu = true },
-                            modifier = Modifier.height(48.dp)
+                            modifier = Modifier.height(36.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp)
                         ) {
                             Text(
-                                viewModel.resolutionOptions[selectedResIndex].first,
+                                text = viewModel.resolutionOptions[selectedResIndex].first,
+                                style = MaterialTheme.typography.labelMedium,
                                 color = VacorderNavy
                             )
                         }
