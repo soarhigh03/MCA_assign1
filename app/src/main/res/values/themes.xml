@@ -4,4 +4,10 @@
         <item name="android:statusBarColor">#000000</item>
         <item name="android:navigationBarColor">#000000</item>
     </style>
+
+    <style name="Theme.Vacorder.Splash" parent="Theme.Vacorder">
+        <item name="android:windowBackground">@drawable/splash_background</item>
+        <item name="android:statusBarColor">@color/splash_background</item>
+        <item name="android:navigationBarColor">@color/splash_background</item>
+    </style>
 </resources>

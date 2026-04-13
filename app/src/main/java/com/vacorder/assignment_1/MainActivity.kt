@@ -11,6 +11,7 @@ import com.vacorder.assignment_1.ui.theme.VacorderTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        setTheme(R.style.Theme_Vacorder)
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         hideSystemBars()
