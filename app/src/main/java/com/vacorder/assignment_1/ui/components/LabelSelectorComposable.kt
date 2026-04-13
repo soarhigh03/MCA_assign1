@@ -1,5 +1,7 @@
 package com.vacorder.assignment_1.ui.components
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
@@ -34,6 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.dp
 import com.vacorder.assignment_1.ui.theme.VacorderNavy
@@ -123,7 +126,7 @@ fun LabelSelector(
             }
         }
 
-        // Horizontal scroll indicator — visible only when content overflows
+        // Horizontal scroll indicator — visible only while actively scrolling
         if (scrollState.maxValue > 0 && viewportWidthPx > 0) {
             val contentPx = viewportWidthPx + scrollState.maxValue
             val thumbFraction = viewportWidthPx.toFloat() / contentPx
@@ -131,10 +134,19 @@ fun LabelSelector(
                 if (scrollState.maxValue == 0) 0f
                 else scrollState.value.toFloat() / scrollState.maxValue
 
+            val indicatorAlpha by animateFloatAsState(
+                targetValue = if (scrollState.isScrollInProgress) 1f else 0f,
+                animationSpec = tween(
+                    durationMillis = if (scrollState.isScrollInProgress) 120 else 400
+                ),
+                label = "scrollIndicatorAlpha"
+            )
+
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .alpha(indicatorAlpha)
             ) {
                 val trackWidth = maxWidth
                 val thumbWidth = trackWidth * thumbFraction
