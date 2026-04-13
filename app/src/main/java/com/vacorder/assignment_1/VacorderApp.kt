@@ -4,12 +4,12 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.vacorder.assignment_1.ui.home.HomeScreen
-import com.vacorder.assignment_1.ui.imu.ImuScreen
 import com.vacorder.assignment_1.ui.camera.CameraScreen
+import com.vacorder.assignment_1.ui.imu.ImuScreen
+import com.vacorder.assignment_1.ui.map.MapScreen
 
 sealed class Screen(val route: String) {
-    data object Home : Screen("home")
+    data object Map : Screen("map")
     data object Imu : Screen("imu")
     data object Camera : Screen("camera")
 }
@@ -18,9 +18,9 @@ sealed class Screen(val route: String) {
 fun VacorderApp() {
     val navController = rememberNavController()
 
-    NavHost(navController = navController, startDestination = Screen.Home.route) {
-        composable(Screen.Home.route) {
-            HomeScreen(
+    NavHost(navController = navController, startDestination = Screen.Map.route) {
+        composable(Screen.Map.route) {
+            MapScreen(
                 onNavigateToImu = { navController.navigate(Screen.Imu.route) },
                 onNavigateToCamera = { navController.navigate(Screen.Camera.route) }
             )

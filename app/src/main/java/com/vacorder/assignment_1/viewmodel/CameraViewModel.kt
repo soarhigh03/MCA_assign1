@@ -9,6 +9,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.vacorder.assignment_1.data.FileStorageHelper
 import com.vacorder.assignment_1.data.LabelRepository
+import com.vacorder.assignment_1.location.LocationCollector
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,6 +20,15 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
 
     private val labelRepo = LabelRepository(application)
     private val fileHelper = FileStorageHelper(application)
+    val locationCollector = LocationCollector(application)
+
+    fun startLocationListening() {
+        locationCollector.start()
+    }
+
+    fun stopLocationListening() {
+        locationCollector.stop()
+    }
 
     private val _labels = MutableStateFlow(labelRepo.getCameraLabels())
     val labels: StateFlow<List<String>> = _labels.asStateFlow()
@@ -91,7 +101,8 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
                     bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
                 }
 
-                val file = fileHelper.saveImage(label, bitmap, bitmap.width, bitmap.height)
+                val loc = locationCollector.lastLocation.value
+                val file = fileHelper.saveImage(label, bitmap, bitmap.width, bitmap.height, loc)
                 _captureMessage.value = "Saved: ${file.name}"
             } catch (e: Exception) {
                 _captureMessage.value = "Error: ${e.message}"
@@ -103,5 +114,10 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
 
     fun clearCaptureMessage() {
         _captureMessage.value = null
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        locationCollector.stop()
     }
 }

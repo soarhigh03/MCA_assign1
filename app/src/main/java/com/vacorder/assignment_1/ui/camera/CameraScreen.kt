@@ -47,6 +47,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -61,6 +62,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
 import com.vacorder.assignment_1.ui.components.LabelSelector
@@ -76,11 +78,30 @@ fun CameraScreen(
     viewModel: CameraViewModel = viewModel()
 ) {
     val cameraPermissionState = rememberPermissionState(Manifest.permission.CAMERA)
+    val locationPermissions = rememberMultiplePermissionsState(
+        listOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        )
+    )
 
     LaunchedEffect(Unit) {
         if (!cameraPermissionState.status.isGranted) {
             cameraPermissionState.launchPermissionRequest()
         }
+        if (!locationPermissions.allPermissionsGranted) {
+            locationPermissions.launchMultiplePermissionRequest()
+        }
+    }
+
+    LaunchedEffect(locationPermissions.allPermissionsGranted) {
+        if (locationPermissions.allPermissionsGranted) {
+            viewModel.startLocationListening()
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose { viewModel.stopLocationListening() }
     }
 
     val labels by viewModel.labels.collectAsState()
@@ -129,6 +150,43 @@ fun CameraScreen(
                 val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
 
                 val targetRes = viewModel.resolutionOptions[selectedResIndex].second
+                val previewView = remember(context) {
+                    PreviewView(context).apply {
+                        scaleType = PreviewView.ScaleType.FILL_CENTER
+                        implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+                    }
+                }
+
+                val cameraProvider by produceState<ProcessCameraProvider?>(null, context) {
+                    val future = ProcessCameraProvider.getInstance(context)
+                    future.addListener(
+                        { value = future.get() },
+                        ContextCompat.getMainExecutor(context)
+                    )
+                }
+
+                LaunchedEffect(cameraProvider, isFrontCamera, selectedResIndex) {
+                    val provider = cameraProvider ?: return@LaunchedEffect
+                    val preview = Preview.Builder().build().also {
+                        it.setSurfaceProvider(previewView.surfaceProvider)
+                    }
+                    val capture = ImageCapture.Builder()
+                        .setTargetResolution(
+                            android.util.Size(targetRes.first, targetRes.second)
+                        )
+                        .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+                        .build()
+                    imageCapture.value = capture
+                    val selector = if (isFrontCamera)
+                        CameraSelector.DEFAULT_FRONT_CAMERA
+                    else
+                        CameraSelector.DEFAULT_BACK_CAMERA
+                    try {
+                        provider.unbindAll()
+                        provider.bindToLifecycle(lifecycleOwner, selector, preview, capture)
+                    } catch (_: Exception) {
+                    }
+                }
 
                 Box(
                     modifier = Modifier
@@ -138,42 +196,7 @@ fun CameraScreen(
                         .clip(RoundedCornerShape(16.dp))
                 ) {
                     AndroidView(
-                        factory = { ctx ->
-                            PreviewView(ctx).apply {
-                                scaleType = PreviewView.ScaleType.FILL_CENTER
-                            }
-                        },
-                        update = { previewView ->
-                            val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
-                            cameraProviderFuture.addListener({
-                                val cameraProvider = cameraProviderFuture.get()
-                                val preview = Preview.Builder().build().also {
-                                    it.setSurfaceProvider(previewView.surfaceProvider)
-                                }
-
-                                val capture = ImageCapture.Builder()
-                                    .setTargetResolution(
-                                        android.util.Size(targetRes.first, targetRes.second)
-                                    )
-                                    .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
-                                    .build()
-                                imageCapture.value = capture
-
-                                val selector = if (isFrontCamera)
-                                    CameraSelector.DEFAULT_FRONT_CAMERA
-                                else
-                                    CameraSelector.DEFAULT_BACK_CAMERA
-
-                                try {
-                                    cameraProvider.unbindAll()
-                                    cameraProvider.bindToLifecycle(
-                                        lifecycleOwner, selector, preview, capture
-                                    )
-                                } catch (e: Exception) {
-                                    // Camera binding failed
-                                }
-                            }, ContextCompat.getMainExecutor(context))
-                        },
+                        factory = { previewView },
                         modifier = Modifier.fillMaxSize()
                     )
 

@@ -1,5 +1,6 @@
 package com.vacorder.assignment_1.ui.imu
 
+import android.Manifest
 import android.hardware.SensorManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -24,13 +25,14 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -38,17 +40,42 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.vacorder.assignment_1.ui.components.LabelSelector
 import com.vacorder.assignment_1.ui.theme.VacorderNavy
 import com.vacorder.assignment_1.ui.theme.VacorderYellow
 import com.vacorder.assignment_1.viewmodel.ImuViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun ImuScreen(
     onBack: () -> Unit,
     viewModel: ImuViewModel = viewModel()
 ) {
+    val locationPermissions = rememberMultiplePermissionsState(
+        listOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        )
+    )
+
+    LaunchedEffect(Unit) {
+        if (!locationPermissions.allPermissionsGranted) {
+            locationPermissions.launchMultiplePermissionRequest()
+        }
+    }
+
+    LaunchedEffect(locationPermissions.allPermissionsGranted) {
+        if (locationPermissions.allPermissionsGranted) {
+            viewModel.startLocationListening()
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose { viewModel.stopLocationListening() }
+    }
+
     val labels by viewModel.labels.collectAsState()
     val selectedLabel by viewModel.selectedLabel.collectAsState()
     val isRecording by viewModel.isRecording.collectAsState()
@@ -149,41 +176,56 @@ fun ImuScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
             ) {
-                val delayLabels = mapOf(
-                    SensorManager.SENSOR_DELAY_NORMAL to "Normal (~5 Hz)",
-                    SensorManager.SENSOR_DELAY_UI to "UI (~15 Hz)",
-                    SensorManager.SENSOR_DELAY_GAME to "Game (~50 Hz)",
-                    SensorManager.SENSOR_DELAY_FASTEST to "Fastest"
-                )
                 Text(
-                    text = "Sensor Delay: ${delayLabels[sensorDelay] ?: "Custom"}",
+                    text = "Frequency",
                     style = MaterialTheme.typography.labelLarge
                 )
-                Slider(
-                    value = when (sensorDelay) {
-                        SensorManager.SENSOR_DELAY_NORMAL -> 0f
-                        SensorManager.SENSOR_DELAY_UI -> 1f
-                        SensorManager.SENSOR_DELAY_GAME -> 2f
-                        SensorManager.SENSOR_DELAY_FASTEST -> 3f
-                        else -> 2f
-                    },
-                    onValueChange = { value ->
-                        val delay = when (value.toInt()) {
-                            0 -> SensorManager.SENSOR_DELAY_NORMAL
-                            1 -> SensorManager.SENSOR_DELAY_UI
-                            2 -> SensorManager.SENSOR_DELAY_GAME
-                            3 -> SensorManager.SENSOR_DELAY_FASTEST
-                            else -> SensorManager.SENSOR_DELAY_GAME
-                        }
-                        viewModel.setSensorDelay(delay)
-                    },
-                    valueRange = 0f..3f,
-                    steps = 2,
-                    colors = SliderDefaults.colors(
-                        thumbColor = VacorderYellow,
-                        activeTrackColor = VacorderNavy
-                    )
+                Spacer(modifier = Modifier.height(6.dp))
+
+                val options = listOf(
+                    "5 Hz" to SensorManager.SENSOR_DELAY_NORMAL,
+                    "15 Hz" to SensorManager.SENSOR_DELAY_UI,
+                    "50 Hz" to SensorManager.SENSOR_DELAY_GAME
                 )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    options.forEach { (label, delay) ->
+                        val selected = sensorDelay == delay
+                        OutlinedButton(
+                            onClick = {
+                                if (!isRecording && sensorDelay != delay) {
+                                    viewModel.setSensorDelay(delay)
+                                }
+                            },
+                            enabled = !isRecording,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(44.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                containerColor = if (selected) VacorderNavy else Color.Transparent,
+                                contentColor = if (selected) VacorderYellow else VacorderNavy
+                            )
+                        ) {
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                        }
+                    }
+                }
+
+                if (isRecording) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Stop recording to change frequency",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = VacorderNavy.copy(alpha = 0.5f)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))

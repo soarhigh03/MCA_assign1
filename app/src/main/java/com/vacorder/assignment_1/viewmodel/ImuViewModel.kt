@@ -9,6 +9,7 @@ import com.vacorder.assignment_1.data.FileStorageHelper
 import com.vacorder.assignment_1.data.LabelRepository
 import com.vacorder.assignment_1.data.SensorReading
 import com.vacorder.assignment_1.data.SensorTableRow
+import com.vacorder.assignment_1.location.LocationCollector
 import com.vacorder.assignment_1.sensor.SensorCollector
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -21,6 +22,7 @@ import java.io.BufferedWriter
 class ImuViewModel(application: Application) : AndroidViewModel(application) {
 
     val sensorCollector = SensorCollector(application)
+    val locationCollector = LocationCollector(application)
     private val labelRepo = LabelRepository(application)
     private val fileHelper = FileStorageHelper(application)
 
@@ -48,11 +50,34 @@ class ImuViewModel(application: Application) : AndroidViewModel(application) {
     private var accelWriter: BufferedWriter? = null
     private var gyroWriter: BufferedWriter? = null
     private var magnetWriter: BufferedWriter? = null
+    private var locationWriter: BufferedWriter? = null
     private var recordingJob: Job? = null
 
     init {
         sensorCollector.startListening(_sensorDelay.value)
         startTableUpdates()
+        startLocationUpdates()
+    }
+
+    private fun startLocationUpdates() {
+        viewModelScope.launch {
+            locationCollector.lastLocation.collect { point ->
+                point ?: return@collect
+                if (_isRecording.value) {
+                    locationWriter?.let {
+                        launch(Dispatchers.IO) { fileHelper.writeLocationRow(it, point) }
+                    }
+                }
+            }
+        }
+    }
+
+    fun startLocationListening() {
+        locationCollector.start()
+    }
+
+    fun stopLocationListening() {
+        locationCollector.stop()
     }
 
     private fun startTableUpdates() {
@@ -137,6 +162,9 @@ class ImuViewModel(application: Application) : AndroidViewModel(application) {
             gyroWriter = fileHelper.createCsvWriter(gyroFile)
             magnetWriter = fileHelper.createCsvWriter(magnetFile)
 
+            val locationFile = fileHelper.createLocationFile(label)
+            locationWriter = fileHelper.createLocationWriter(locationFile)
+
             _isRecording.value = true
         }
     }
@@ -147,9 +175,11 @@ class ImuViewModel(application: Application) : AndroidViewModel(application) {
             accelWriter?.close()
             gyroWriter?.close()
             magnetWriter?.close()
+            locationWriter?.close()
             accelWriter = null
             gyroWriter = null
             magnetWriter = null
+            locationWriter = null
         }
     }
 
@@ -162,5 +192,6 @@ class ImuViewModel(application: Application) : AndroidViewModel(application) {
         super.onCleared()
         if (_isRecording.value) stopRecording()
         sensorCollector.stopListening()
+        locationCollector.stop()
     }
 }

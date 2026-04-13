@@ -43,6 +43,7 @@ class SensorCollector(context: Context) : SensorEventListener {
     private val historyBuffer = ArrayDeque<SensorReading>(MAX_HISTORY)
 
     private var isListening = false
+    private var currentDelay: Int = SensorManager.SENSOR_DELAY_GAME
 
     companion object {
         private const val MAX_HISTORY = 500
@@ -51,6 +52,7 @@ class SensorCollector(context: Context) : SensorEventListener {
     fun startListening(delay: Int = SensorManager.SENSOR_DELAY_GAME) {
         if (isListening) return
         isListening = true
+        currentDelay = delay
 
         accelCount = 0
         gyroCount = 0
@@ -79,9 +81,12 @@ class SensorCollector(context: Context) : SensorEventListener {
     }
 
     fun setDelay(delay: Int) {
+        if (delay == currentDelay && isListening) return
         if (isListening) {
             stopListening()
             startListening(delay)
+        } else {
+            currentDelay = delay
         }
     }
 
