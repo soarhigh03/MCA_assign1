@@ -1,11 +1,17 @@
 package com.vacorder.assignment_1.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
@@ -28,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.dp
 import com.vacorder.assignment_1.ui.theme.VacorderNavy
 import com.vacorder.assignment_1.ui.theme.VacorderYellow
@@ -81,10 +88,14 @@ fun LabelSelector(
             }
         }
 
+        val scrollState = rememberScrollState()
+        var viewportWidthPx by remember { mutableStateOf(0) }
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
+                .horizontalScroll(scrollState)
+                .onSizeChanged { viewportWidthPx = it.width }
                 .padding(horizontal = 12.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -108,6 +119,45 @@ fun LabelSelector(
                         selectedLabelColor = VacorderNavy
                     ),
                     modifier = Modifier.padding(horizontal = 4.dp)
+                )
+            }
+        }
+
+        // Horizontal scroll indicator — visible only when content overflows
+        if (scrollState.maxValue > 0 && viewportWidthPx > 0) {
+            val contentPx = viewportWidthPx + scrollState.maxValue
+            val thumbFraction = viewportWidthPx.toFloat() / contentPx
+            val scrollFraction =
+                if (scrollState.maxValue == 0) 0f
+                else scrollState.value.toFloat() / scrollState.maxValue
+
+            BoxWithConstraints(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+            ) {
+                val trackWidth = maxWidth
+                val thumbWidth = trackWidth * thumbFraction
+                val thumbOffset = (trackWidth - thumbWidth) * scrollFraction
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(3.dp)
+                        .background(
+                            VacorderNavy.copy(alpha = 0.12f),
+                            RoundedCornerShape(50)
+                        )
+                )
+                Box(
+                    modifier = Modifier
+                        .offset(x = thumbOffset)
+                        .width(thumbWidth)
+                        .height(3.dp)
+                        .background(
+                            VacorderNavy.copy(alpha = 0.6f),
+                            RoundedCornerShape(50)
+                        )
                 )
             }
         }
