@@ -161,13 +161,15 @@ fun MapScreen(
                     FilterChip(
                         selected = selectedLabel == null,
                         onClick = { viewModel.selectLabel(null) },
-                        label = { Text("All") }
+                        label = { Text("All") },
+                        shape = RoundedCornerShape(50)
                     )
                     labels.forEach { label ->
                         FilterChip(
                             selected = selectedLabel == label,
                             onClick = { viewModel.selectLabel(label) },
-                            label = { Text(label) }
+                            label = { Text(label) },
+                            shape = RoundedCornerShape(50)
                         )
                     }
                 }
