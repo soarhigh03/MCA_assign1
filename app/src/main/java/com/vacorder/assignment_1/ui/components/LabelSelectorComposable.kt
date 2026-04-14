@@ -5,7 +5,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -38,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.vacorder.assignment_1.ui.theme.VacorderNavy
 import com.vacorder.assignment_1.ui.theme.VacorderYellow
@@ -142,16 +142,16 @@ fun LabelSelector(
                 label = "scrollIndicatorAlpha"
             )
 
-            BoxWithConstraints(
+            var trackWidthPx by remember { mutableStateOf(0) }
+            val density = LocalDensity.current
+
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp)
                     .alpha(indicatorAlpha)
+                    .onSizeChanged { trackWidthPx = it.width }
             ) {
-                val trackWidth = maxWidth
-                val thumbWidth = trackWidth * thumbFraction
-                val thumbOffset = (trackWidth - thumbWidth) * scrollFraction
-
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -161,16 +161,21 @@ fun LabelSelector(
                             RoundedCornerShape(50)
                         )
                 )
-                Box(
-                    modifier = Modifier
-                        .offset(x = thumbOffset)
-                        .width(thumbWidth)
-                        .height(3.dp)
-                        .background(
-                            VacorderNavy.copy(alpha = 0.6f),
-                            RoundedCornerShape(50)
-                        )
-                )
+                if (trackWidthPx > 0) {
+                    val trackWidthDp = with(density) { trackWidthPx.toDp() }
+                    val thumbWidth = trackWidthDp * thumbFraction
+                    val thumbOffset = (trackWidthDp - thumbWidth) * scrollFraction
+                    Box(
+                        modifier = Modifier
+                            .offset(x = thumbOffset)
+                            .width(thumbWidth)
+                            .height(3.dp)
+                            .background(
+                                VacorderNavy.copy(alpha = 0.6f),
+                                RoundedCornerShape(50)
+                            )
+                    )
+                }
             }
         }
     }

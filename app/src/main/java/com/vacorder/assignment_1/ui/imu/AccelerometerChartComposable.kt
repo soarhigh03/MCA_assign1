@@ -50,7 +50,14 @@ fun AccelerometerChart(
 
                     xAxis.position = XAxis.XAxisPosition.BOTTOM
                     xAxis.setDrawGridLines(false)
-                    xAxis.setDrawLabels(false)
+                    xAxis.setDrawLabels(true)
+                    xAxis.textSize = 9f
+                    xAxis.granularity = 0.5f
+                    xAxis.valueFormatter = object :
+                        com.github.mikephil.charting.formatter.ValueFormatter() {
+                        override fun getFormattedValue(value: Float): String =
+                            String.format("%.1fs", value)
+                    }
 
                     axisLeft.textSize = 10f
                     axisRight.isEnabled = false
@@ -68,27 +75,35 @@ fun AccelerometerChart(
                 val step = (dataPoints.size / 200).coerceAtLeast(1)
                 val sampled = dataPoints.filterIndexed { i, _ -> i % step == 0 }
 
-                val xEntries = sampled.mapIndexed { i, r -> Entry(i.toFloat(), r.x) }
-                val yEntries = sampled.mapIndexed { i, r -> Entry(i.toFloat(), r.y) }
-                val zEntries = sampled.mapIndexed { i, r -> Entry(i.toFloat(), r.z) }
+                // Convert nanosecond sensor timestamps to seconds, zeroed at the
+                // window's first sample, so the x-axis reads "seconds ago".
+                val t0 = sampled.firstOrNull()?.timestamp ?: 0L
+                fun tSec(r: SensorReading) = ((r.timestamp - t0) / 1_000_000_000f)
+
+                val xEntries = sampled.map { Entry(tSec(it), it.x) }
+                val yEntries = sampled.map { Entry(tSec(it), it.y) }
+                val zEntries = sampled.map { Entry(tSec(it), it.z) }
 
                 val xSet = LineDataSet(xEntries, "X").apply {
                     color = AndroidColor.rgb(239, 83, 80)  // Red
                     setDrawCircles(false)
                     lineWidth = 1.5f
                     setDrawValues(false)
+                    mode = LineDataSet.Mode.CUBIC_BEZIER
                 }
                 val ySet = LineDataSet(yEntries, "Y").apply {
                     color = AndroidColor.rgb(102, 187, 106) // Green
                     setDrawCircles(false)
                     lineWidth = 1.5f
                     setDrawValues(false)
+                    mode = LineDataSet.Mode.CUBIC_BEZIER
                 }
                 val zSet = LineDataSet(zEntries, "Z").apply {
                     color = AndroidColor.rgb(66, 165, 245)  // Blue
                     setDrawCircles(false)
                     lineWidth = 1.5f
                     setDrawValues(false)
+                    mode = LineDataSet.Mode.CUBIC_BEZIER
                 }
 
                 chart.data = LineData(xSet, ySet, zSet)
